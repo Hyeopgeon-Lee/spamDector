@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spam-api
+  namespace: kopo-trainee1
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod   # ← notice와 동일
+spec:
+  tls:
+    - hosts:
+        - spam.k-bigdata.kr
+      secretName: spam-api-tls
+  rules:
+    - host: spam.k-bigdata.kr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spam-api
+                port:
+                  number: 8000
