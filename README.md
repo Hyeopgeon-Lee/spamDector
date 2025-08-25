@@ -5,16 +5,26 @@ TensorFlow/Keras(TextVectorization 포함)로 학습한 모델을 FastAPI로 서
 
 ---
 
-## 무엇이 들어있나요?
+## ✨ 주요 특징
+
+- **엔드투엔드 파이프라인**: 학습 → 평가 → API 서빙
+- **인코딩 안전**: Windows(cp949) 환경에서도 안전하도록 UTF-8 모드/폴백 처리
+- **전처리 일관성**: 학습/평가/서빙 모두 동일한 `custom_standardize` 등록
+- **운영 친화**: CORS, 일관된 오류 응답, 환경변수 기반 임계값(threshold)
+- **컨테이너화**: Docker 이미지 제공 (`hyeopgeonlee/spam-dector`)
+
+---
+
+## 📦 포함된 구성요소
 
 - **학습 스크립트**: `spam_model.py`  
   - 데이터 로드(UTF-8 우선), 학습/검증 분할(8:2), TextVectorization **학습 분할만 adapt**  
   - TextCNN 멀티브랜치(커널 3/4/5) + AdamW + CosineDecay  
   - AUC 기준 조기종료/체크포인트, 최종 모델 `.keras` 저장  
-  - 검증셋에서 **ROC-AUC/PR-AUC** 및 **F1 최대 임계값(th_best)** 계산 → `model/eval_meta.json`
+  - 검증에서 **ROC-AUC/PR-AUC**, **F1 최대 임계값(th_best)** 계산 → `model/eval_meta.json`
 
 - **평가 스크립트**: `eval_spam.py`  
-  - 저장된 `.keras` 모델을 로드해 **독립 분할**로 다시 평가  
+  - 저장된 `.keras` 모델을 로드해 **독립 분할**로 재평가  
   - **세그먼트별 성능**(URL/EMAIL/한글 포함), 혼동행렬, best/0.5 임계값 지표 저장  
   - **윈도우 인코딩(cp949) vocabulary 자동 교정 로더** 포함
 
@@ -25,7 +35,7 @@ TensorFlow/Keras(TextVectorization 포함)로 학습한 모델을 FastAPI로 서
 
 ---
 
-## 폴더 구조
+## 🗂 폴더 구조
 
 ```
 .
@@ -43,7 +53,7 @@ TensorFlow/Keras(TextVectorization 포함)로 학습한 모델을 FastAPI로 서
 
 ---
 
-## 데이터셋 형식
+## 🧾 데이터셋 형식
 
 - CSV 컬럼:  
   - `content` : 텍스트  
@@ -52,7 +62,7 @@ TensorFlow/Keras(TextVectorization 포함)로 학습한 모델을 FastAPI로 서
 
 ---
 
-## 학습(Training)
+## 🧪 학습(Training)
 
 > **Windows라면** 파이썬을 **UTF-8 모드**로 실행하세요. (Keras가 vocabulary 자산을 UTF-8로 기록)
 
@@ -71,7 +81,7 @@ python spam_model.py
 
 ---
 
-## 평가(Evaluation)
+## ✅ 평가(Evaluation)
 
 ```bash
 # 동일/다른 머신에서 모델을 점검
@@ -85,7 +95,7 @@ python eval_spam.py --data data/spam_SNS.csv --model model/mySpamModel.keras --o
 
 ---
 
-## API 서버 실행
+## 🚀 API 서버 실행
 
 ### 로컬(Python)
 
@@ -97,31 +107,22 @@ python -X utf8 serve.py
 uvicorn serve:app --host 0.0.0.0 --port 8000
 ```
 
-### Docker (예시)
-
-```bash
-# 빌드
-docker build -t spam-api:latest .
-
-# 실행 (포트 공개)
-docker run -d --name spam-api -p 8000:8000   -e MODEL_PATH=/app/model/mySpamModel.keras   -e EVAL_META_PATH=/app/model/eval_meta.json   spam-api:latest
-```
-
-> Docker/Linux는 기본 UTF-8이므로 윈도우 cp949 문제는 재발하지 않습니다.
-
 ### 환경변수
 
-- `MODEL_PATH` (기본: `model/mySpamModel.keras`)  
-- `EVAL_META_PATH` (기본: `model/eval_meta.json`)  
-- `THRESHOLD` (기본: meta의 `th_best` → 없으면 `0.5`)  
-- `SCORE_DECIMALS` (기본: `6`)  
-- `HOST` / `PORT` (기본: `0.0.0.0` / `8000`)  
-- `CORS_ALLOW_ORIGINS` (기본: `*` / 예: `https://a.com,https://b.com`)  
-- `TEXT_MAX_CHARS` (기본: `5000`) / `BATCH_MAX_ITEMS` (기본: `256`)
+| 변수 | 기본값 | 설명 |
+|---|---|---|
+| `MODEL_PATH` | `model/mySpamModel.keras` | 로드할 Keras 모델 경로 |
+| `EVAL_META_PATH` | `model/eval_meta.json` | `th_best` 등 메타 읽기 |
+| `THRESHOLD` | (meta의 `th_best` \|\| `0.5`) | 분류 임계값(오버라이드용) |
+| `SCORE_DECIMALS` | `6` | 점수 문자열 소수 자리수 |
+| `HOST` / `PORT` | `0.0.0.0` / `8000` | 바인딩 주소/포트 |
+| `CORS_ALLOW_ORIGINS` | `*` | CORS 허용(콤마 구분) |
+| `TEXT_MAX_CHARS` | `5000` | 한 샘플 최대 길이 |
+| `BATCH_MAX_ITEMS` | `256` | 배치 최대 건수 |
 
 ---
 
-## API 사용법
+## 📡 API 사용법
 
 FastAPI 문서:
 - Swagger UI: `http://<host>:8000/docs`  
@@ -202,38 +203,161 @@ FastAPI 문서:
 
 ---
 
-## 운영/배포 팁
+## 🐳 Docker 이미지
 
-- **Windows/파이참**: Run Configuration에 `-X utf8`(Interpreter options) 또는 `PYTHONUTF8=1`(Env) 설정  
-- **Threshold 운용**: 기본은 `eval_meta.json`의 `th_best`; 실시간 민감도 조정이 필요하면 `THRESHOLD` 환경변수로 오버라이드  
-- **CORS**: `CORS_ALLOW_ORIGINS`에 배포 도메인을 콤마로 나열  
-- **리소스**: 컨테이너 메모리 낮으면 워커=1 권장, 스레드 제한(예: `OMP_NUM_THREADS=1`)  
-- **보안**: 퍼블릭으로 노출 시 반드시 리버스 프록시(HTTPS)·API 키·레이트리밋 고려
+### 이미지 경로
+- **Docker Hub:** `docker.io/hyeopgeonlee/spam-dector:latest`  
+  (권장: 운영에서는 `:latest` 대신 고정 태그 사용 예: `:v0.1.0`)
+
+### 빠른 시작 (Quick start)
+
+```bash
+# 1) 이미지 받기
+docker pull hyeopgeonlee/spam-dector:latest
+
+# 2) 실행 (호스트 8000 → 컨테이너 8000)
+docker run --rm -p 8000:8000   --name spam-api   hyeopgeonlee/spam-dector:latest
+```
+
+- API 문서: http://localhost:8000/docs  
+- 헬스체크: http://localhost:8000/health
+
+### 모델/메타 파일 외부 마운트 (선택)
+
+이미지에 모델이 포함되어 있지 않거나 바꿔서 쓰고 싶다면, 호스트의 `./model`을 컨테이너 `/app/model`로 마운트하세요.
+
+```bash
+# macOS/Linux
+docker run -d -p 8000:8000   -v "$(pwd)/model:/app/model"   -e MODEL_PATH=/app/model/mySpamModel.keras   -e EVAL_META_PATH=/app/model/eval_meta.json   --name spam-api   hyeopgeonlee/spam-dector:latest
+
+# Windows PowerShell
+docker run -d -p 8000:8000 `
+  -v "${PWD}\model:/app/model" `
+  -e MODEL_PATH=/app/model/mySpamModel.keras `
+  -e EVAL_META_PATH=/app/model/eval_meta.json `
+  --name spam-api `
+  hyeopgeonlee/spam-dector:latest
+```
+
+### Docker Compose 예시
+
+```yaml
+version: "3.9"
+services:
+  spam-api:
+    image: hyeopgeonlee/spam-dector:latest
+    container_name: spam-api
+    ports:
+      - "8000:8000"
+    environment:
+      MODEL_PATH: /app/model/mySpamModel.keras
+      EVAL_META_PATH: /app/model/eval_meta.json
+      # THRESHOLD: "0.63"   # 필요 시 오버라이드
+      CORS_ALLOW_ORIGINS: "https://your-frontend.example.com"
+      TF_CPP_MIN_LOG_LEVEL: "2"
+      OMP_NUM_THREADS: "1"
+      TF_NUM_INTRAOP_THREADS: "1"
+      TF_NUM_INTEROP_THREADS: "1"
+    volumes:
+      - ./model:/app/model:ro
+    restart: unless-stopped
+```
+
+```bash
+docker compose up -d
+```
+
+### Kubernetes 배포 예시
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spam-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spam-api
+  template:
+    metadata:
+      labels:
+        app: spam-api
+    spec:
+      containers:
+        - name: spam-api
+          image: hyeopgeonlee/spam-dector:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_PATH
+              value: /app/model/mySpamModel.keras
+            - name: EVAL_META_PATH
+              value: /app/model/eval_meta.json
+            - name: TF_CPP_MIN_LOG_LEVEL
+              value: "2"
+          volumeMounts:
+            - name: model-volume
+              mountPath: /app/model
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+      volumes:
+        - name: model-volume
+          persistentVolumeClaim:
+            claimName: spam-model-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spam-api
+spec:
+  type: ClusterIP
+  selector:
+    app: spam-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+```
+
+> 프로덕션에서는 Ingress/HTTPS, 인증·레이트리밋 등을 반드시 고려하세요.
+
+### 태그 전략
+
+- 최신: `hyeopgeonlee/spam-dector:latest`  
+- 고정 버전 예: `hyeopgeonlee/spam-dector:v0.1.0`  
+  → **운영에선 고정 태그를 권장**합니다.
+
+### 트러블슈팅
+
+- **포트가 열리지 않음**: 컨테이너 실행 시 `-p 8000:8000` 매핑 확인  
+  `docker port spam-api` 결과에 `0.0.0.0:8000->8000/tcp`가 보여야 합니다.
+- **모델 로드 실패**: `MODEL_PATH`/`EVAL_META_PATH` 경로 및 `custom_standardize` 일치 여부 점검  
+- **한글/인코딩 문제**: 컨테이너는 기본 UTF-8로 동작(윈도우 cp949 이슈 없음)
+- **메모리 경고**: 컨테이너 메모리 리미트 상향 또는 스레드/워커 수 줄이기
 
 ---
 
-## 트러블슈팅
+## 🔐 라이선스
 
-- **UnicodeEncodeError / cp949**  
-  - 증상: 모델 저장/로드 중 `'cp949' codec can't encode/decode ...`  
-  - 해결: **파이썬/서버를 UTF-8 모드로 실행** (`-X utf8` 또는 `PYTHONUTF8=1`)  
-  - 데이터 CSV는 `utf-8-sig` 권장
-
-- **모델 로드 실패 (TextVectorization/StringLookup)**  
-  - 원인: 학습/서빙의 `custom_standardize` **이름/로직 불일치** 혹은 인코딩  
-  - 조치: `serve.py`의 `custom_standardize`를 **학습과 동일**하게 맞춤
+이 프로젝트는 **Apache License 2.0**을 따릅니다. 
 
 ---
 
-## 라이선스
+## 👤 작성자
 
-프로젝트 목적에 맞는 라이선스를 선택해 `LICENSE` 파일을 추가해 주세요. (예: MIT/Apache-2.0)
-
----
-
-## 📚 작성자
-
-- 한국폴리텍대학 서울강서캠퍼스 **빅데이터과**
-- **이협건 교수**
-- ✉️ hglee67@kopo.ac.kr
-- 🔗 빅데이터학과 입학 상담 **오픈채팅방**: (링크 추가)
+- 한국폴리텍대학 서울강서캠퍼스 **빅데이터소프트웨어과**  
+- **이협건 교수**  
+- ✉️ hglee67@kopo.ac.kr  
+- 🔗 빅데이터소프트웨어과 입학 상담 **오픈채팅방**: (https://open.kakao.com/o/gEd0JIad)
