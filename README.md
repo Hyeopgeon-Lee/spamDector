@@ -274,6 +274,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spam-api
+  # namespace: kopo-trainee1   # 네임스페이스 쓰면 주석 해제
 spec:
   replicas: 1
   selector:
@@ -297,31 +298,27 @@ spec:
               value: /app/model/eval_meta.json
             - name: TF_CPP_MIN_LOG_LEVEL
               value: "2"
-          volumeMounts:
-            - name: model-volume
-              mountPath: /app/model
-              readOnly: true
           readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
+            httpGet: { path: /health, port: 8000 }
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
+            httpGet: { path: /health, port: 8000 }
             initialDelaySeconds: 10
             periodSeconds: 20
-      volumes:
-        - name: model-volume
-          persistentVolumeClaim:
-            claimName: spam-model-pvc
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: spam-api
+  # namespace: kopo-trainee1
 spec:
   type: ClusterIP
   selector:
@@ -329,6 +326,7 @@ spec:
   ports:
     - port: 8000
       targetPort: 8000
+
 ```
 
 > 프로덕션에서는 Ingress/HTTPS, 인증·레이트리밋 등을 반드시 고려하세요.
