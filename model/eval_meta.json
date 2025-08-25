@@ -1,0 +1,6 @@
+{
+  "roc_auc": 0.9999135732650757,
+  "pr_auc": 0.9998272657394409,
+  "th_best": 0.7999999999999999,
+  "note": "Scores computed on validation split (20%)."
+}
