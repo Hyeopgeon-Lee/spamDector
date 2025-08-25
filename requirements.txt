@@ -1,0 +1,13 @@
+# ==== Core ML (TensorFlow + Keras 3 동작 범위) ====
+# 환경에 따라 tensorflow 또는 tensorflow-cpu 중 하나만 쓰세요.
+tensorflow>=2.17,<2.21
+# tensorflow-cpu>=2.17,<2.21   # (Windows/CPU 전용 환경에서 이 줄로 교체해도 됨)
+
+# ==== API / Server ====
+fastapi>=0.111,<1.0
+uvicorn[standard]>=0.30,<0.33
+
+# ==== Data / Utils ====
+numpy>=1.26,<3
+pandas>=2.2,<3
+matplotlib>=3.8,<3.10
